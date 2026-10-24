@@ -13,6 +13,8 @@ export interface AnalyzeResponse {
   mutualFollows: Account[]
   followersNotFollowedBack: Account[]
   warnings: string[]
+  /** How many export files the lists were read from. */
+  source?: { followerFiles: number; followingFiles: number; oldestFollower?: number }
 }
 
 export interface ApiError {

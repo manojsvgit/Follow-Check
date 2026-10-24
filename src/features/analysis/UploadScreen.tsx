@@ -11,9 +11,9 @@ interface Props {
 }
 
 const steps = [
-  ['Request your data', "Ask Instagram for your Followers and following in JSON format."],
+  ['Request your data', "Ask Instagram for Followers and following, JSON format, date range All time."],
   ['Upload the ZIP', 'Drop the file you receive here. It stays on your device and only the two lists are read.'],
-  ['See who is not following back', 'Search, filter and download the results as CSV.'],
+  ['See who is not following back', 'Browse the lists, search for a name and open any profile.'],
 ]
 
 export function UploadScreen({ serverError, onAnalyze, onDismissError }: Props) {
@@ -45,6 +45,11 @@ export function UploadScreen({ serverError, onAnalyze, onDismissError }: Props) 
           <li key={title}><strong>{title}</strong><span>{text}</span></li>
         ))}
       </ol>
+
+      <p className="notice notice--warn" data-testid="export-tip">
+        <strong>When you request your export, set Date range to “All time”</strong> and choose the JSON format. A shorter
+        range leaves out older followers, and they would wrongly show as not following you back.
+      </p>
 
       <Dropzone file={file} error={fileError} onSelect={select} />
       <div className="actions">

@@ -26,6 +26,10 @@ export interface ExportData {
   followers: string[]
   following: string[]
   warnings: string[]
+  /** Unix seconds of the earliest follow in the followers files, if the export has timestamps. */
+  oldestFollower?: number
+  followerFiles: number
+  followingFiles: number
 }
 
 export const LIMITS = {
@@ -92,28 +96,33 @@ export async function readExport(file: File): Promise<ExportData> {
   if (followingFiles.length === 0) throw new ExportError('MissingFollowingFile')
 
   let skipped = 0
-  const collect = (list: Uint8Array[]) =>
+  let oldestFollower: number | undefined
+  const collect = (list: Uint8Array[], isFollowers: boolean) =>
     list.flatMap((data) => {
       const r = extractUsernames(data)
       skipped += r.skipped
+      if (isFollowers && r.oldest !== undefined) oldestFollower = Math.min(oldestFollower ?? r.oldest, r.oldest)
       return r.names
     })
-  const followers = collect(followerFiles)
-  const following = collect(followingFiles)
+  const followers = collect(followerFiles, true)
+  const following = collect(followingFiles, false)
 
   if (followers.length === 0 && following.length === 0) throw new ExportError('EmptyOrUnrecognizedData')
 
   const warnings = skipped
     ? [`${skipped} ${skipped === 1 ? 'entry was' : 'entries were'} skipped because no valid username could be read.`]
     : []
-  return { followers, following, warnings }
+  return {
+    followers, following, warnings, oldestFollower,
+    followerFiles: followerFiles.length, followingFiles: followingFiles.length,
+  }
 }
 
 function asObject(v: unknown): Record<string, unknown> | null {
   return typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null
 }
 
-function extractUsernames(data: Uint8Array): { names: string[]; skipped: number } {
+function extractUsernames(data: Uint8Array): { names: string[]; skipped: number; oldest?: number } {
   let json: unknown
   try {
     json = JSON.parse(new TextDecoder().decode(data))
@@ -128,6 +137,7 @@ function extractUsernames(data: Uint8Array): { names: string[]; skipped: number 
 
   const names: string[] = []
   let skipped = 0
+  let oldest: number | undefined
   for (const entry of entries) {
     const e = asObject(entry)
     const list = e?.string_list_data
@@ -135,13 +145,16 @@ function extractUsernames(data: Uint8Array): { names: string[]; skipped: number 
 
     let found = false
     for (const item of list) {
-      const name = usernameFrom(e, asObject(item))
+      const obj = asObject(item)
+      const name = usernameFrom(e, obj)
       if (name) { names.push(name); found = true }
+      const ts = obj?.timestamp
+      if (typeof ts === 'number' && ts > 0) oldest = Math.min(oldest ?? ts, ts)
     }
     if (!found) skipped++
   }
   if (skipped > 0 && skipped === entries.length) throw new ExportError('UnsupportedExportFormat')
-  return { names, skipped }
+  return { names, skipped, oldest }
 }
 
 // Known patterns: item.value; newer exports put the name in entry.title or only in the profile href.

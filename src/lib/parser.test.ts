@@ -97,3 +97,14 @@ describe('readExport', () => {
     expect(await codeOf(big)).toBe('UploadTooLarge')
   })
 })
+
+describe('oldestFollower', () => {
+  it('reports the earliest follower timestamp', async () => {
+    const entry = (u: string, ts: number) => ({ title: '', string_list_data: [{ value: u, timestamp: ts }] })
+    const d = await readExport(zipFile({
+      'followers_1.json': JSON.stringify([entry('a', 1700000000), entry('b', 1600000000)]),
+      'following.json': followingJson('a'),
+    }))
+    expect(d.oldestFollower).toBe(1600000000)
+  })
+})

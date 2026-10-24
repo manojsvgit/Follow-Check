@@ -89,7 +89,6 @@ describe('results', () => {
     const user = await uploadAndAnalyze()
     await user.click(await screen.findByRole('tab', { name: /followers you don't follow back/i }))
     expect(screen.getByText(/you follow everyone who follows you/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /download csv/i })).toBeDisabled()
   })
 
   it('sorts Z to A when toggled', async () => {
@@ -97,19 +96,6 @@ describe('results', () => {
     await user.click(await screen.findByRole('button', { name: /sort/i }))
     const names = within(screen.getByRole('tabpanel')).getAllByText(/^@/).map((e) => e.textContent)
     expect(names).toEqual(['@dave', '@carol'])
-  })
-
-  it('downloads the active list as CSV and revokes the URL', async () => {
-    const create = vi.fn(() => 'blob:csv')
-    const revoke = vi.fn()
-    vi.stubGlobal('URL', { createObjectURL: create, revokeObjectURL: revoke })
-    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
-    const user = await uploadAndAnalyze()
-    await user.click(await screen.findByRole('button', { name: /download csv/i }))
-    expect(create).toHaveBeenCalledOnce()
-    expect(click).toHaveBeenCalledOnce()
-    expect(revoke).toHaveBeenCalledWith('blob:csv')
-    vi.unstubAllGlobals()
   })
 
   it('reset clears results and returns to upload', async () => {
@@ -147,5 +133,17 @@ describe('theme', () => {
     expect(document.documentElement.dataset.theme).toBe('dark')
     await user.click(screen.getByRole('button', { name: /switch to light theme/i }))
     expect(document.documentElement.dataset.theme).toBe('light')
+  })
+})
+
+describe('export tip', () => {
+  it('tells users to choose All time on the upload page', () => {
+    render(<App />)
+    expect(screen.getByTestId('export-tip')).toHaveTextContent(/all time/i)
+  })
+
+  it('shows how far back the followers list goes', async () => {
+    await uploadAndAnalyze()
+    expect(await screen.findByText(/followers list goes back to/i)).toBeInTheDocument()
   })
 })

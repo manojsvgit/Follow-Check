@@ -4,26 +4,13 @@ import { EmptyState } from '../../components/EmptyState'
 import { SummaryCards } from '../../components/SummaryCards'
 import { Tabs, type TabItem } from '../../components/Tabs'
 import type { AnalyzeResponse, ListKey } from '../../types/api'
-import { downloadCsv } from '../../utils/csv'
 
 const PAGE = 200
 
-const meta: Record<ListKey, { label: string; file: string; empty: string }> = {
-  notFollowingBack: {
-    label: "Don't follow back",
-    file: 'followcheck-not-following-back.csv',
-    empty: 'Everyone you follow follows you back.',
-  },
-  mutualFollows: {
-    label: 'Mutual follows',
-    file: 'followcheck-mutual-follows.csv',
-    empty: 'You have no mutual follows in this export.',
-  },
-  followersNotFollowedBack: {
-    label: "Followers you don't follow back",
-    file: 'followcheck-followers-not-followed-back.csv',
-    empty: 'You follow everyone who follows you.',
-  },
+const meta: Record<ListKey, { label: string; empty: string }> = {
+  notFollowingBack: { label: "Don't follow back", empty: 'Everyone you follow follows you back.' },
+  mutualFollows: { label: 'Mutual follows', empty: 'You have no mutual follows in this export.' },
+  followersNotFollowedBack: { label: "Followers you don't follow back", empty: 'You follow everyone who follows you.' },
 }
 
 export function ResultsDashboard({ result, onReset }: { result: AnalyzeResponse; onReset: () => void }) {
@@ -55,6 +42,16 @@ export function ResultsDashboard({ result, onReset }: { result: AnalyzeResponse;
       <p className="notice">
         These results come from the export you uploaded. They reflect the date it was generated, not live Instagram data.
       </p>
+      {result.source && (
+        <p className="notice">
+          Read {result.followersCount.toLocaleString()} followers and {result.followingCount.toLocaleString()} following.
+          {result.source.oldestFollower !== undefined && (
+            <> Your followers list goes back to {new Date(result.source.oldestFollower * 1000).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}.</>
+          )}{' '}
+          Compare these totals with your Instagram profile. If followers looks too low, request the export again with the
+          date range set to <strong>All time</strong>.
+        </p>
+      )}
       {result.warnings.map((w) => <p key={w} className="notice notice--warn">{w}</p>)}
 
       <SummaryCards result={result} />
@@ -71,14 +68,6 @@ export function ResultsDashboard({ result, onReset }: { result: AnalyzeResponse;
         />
         <button type="button" className="btn btn--secondary" onClick={() => setAscending((a) => !a)}>
           Sort: {ascending ? 'A → Z' : 'Z → A'}
-        </button>
-        <button
-          type="button"
-          className="btn btn--secondary"
-          disabled={filtered.length === 0}
-          onClick={() => downloadCsv(meta[active].file, filtered)}
-        >
-          Download CSV
         </button>
       </div>
 
